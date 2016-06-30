@@ -8,10 +8,21 @@ define(function (require, exports, module) {
 	'use strict';
 	require('libs/jquery');
 
-	var isWebkitStyle = document.body.style.webkitTransform !== undefined;
-	var animationType = isWebkitStyle ?'-webkit-animation': 'animation';
-	var animationEndType = isWebkitStyle ?'webkitAnimationEnd': 'animationend';
 	var renderCount = 0;
+
+	var fixCss = (function () {
+		var fixObj = {};
+		var isWebkitStyle = document.body.style.webkitTransform !== undefined;
+		if(isWebkitStyle){
+			fixObj.animation = '-webkit-animation';
+			fixObj.animationend = 'webkitAnimationEnd';
+			fixObj.transform = '-webkit-transform';
+		}
+		return function (attr) {
+			var fixedAttr = fixObj[attr];
+			return fixedAttr ? fixedAttr : attr;
+		}
+	}());
 
 	function eachKeys(obj, func){
 		Object.keys(obj).forEach(function (key, index) {
@@ -28,7 +39,16 @@ define(function (require, exports, module) {
 		_$container:null,
 		_msgList: null,
 		_defaultConfig:{
-			view: 'body',
+			view: 'body'
+		},
+		_count:0,
+		_className: 'flashWord',
+		_staticConfig:{
+			maxMsgLen:6,
+			maxDisplayMsgLen:5,
+			displayDuration:2000,
+			animationName:'toLine',
+			slideInDuration:800,
 			css:{
 				container:{
 					width: '300px',
@@ -52,16 +72,7 @@ define(function (require, exports, module) {
 					'-webkit-transform': 'translate3d(0, 0, 0)',
 					display: 'none'
 				}
-			}
-		},
-		_count:0,
-		_className: 'flashWord',
-		_staticConfig:{
-			maxMsgLen:6,
-			maxDisplayMsgLen:5,
-			displayDuration:2000,
-			animationName:'toLine',
-			slideInDuration:800,
+			},
 			displayOptions:{ // 动画效果配置
 				showUp:{
 					'0%': {
@@ -97,26 +108,32 @@ define(function (require, exports, module) {
 		init: function (options) {
 			this._msgList = [];
 			this._options = $.extend(true, {}, this._defaultConfig, options);
-			this._className = this._className + (renderCount++); // 独特className
-			this._cssAdjust();
+			this._renderBasicCss();
 			this._addFrame();
 			this._renderContainer();
 		},
+		// 预先把基本的ul/li样式都生成到页面里
+		_renderBasicCss: function () {
+			if(!this._options.css){
+				this._options.css = {};
+				this._className = this._className + (renderCount++); // 独特className
+				this._options.css['.' + this._className] = this._staticConfig.css.container;
+				this._options.css['.' + this._className + ' li'] = this._staticConfig.css.msg;
+			}
+			this._addCssRule(this._options.css);
+		},
 		_addFrame: function () {
 			var config = this._staticConfig;
-			var cssRules = []; // css of animation
+			var cssRules = {}; // css of animation
 			var keyFrames = {};// css of keyFrames
 			for(var i = 1; i <= config.maxDisplayMsgLen; i++){
 				// 一个排队位置的dom对应一个css的animation选择器.
 				var animationName = config.animationName + i;
 				// animation
-				cssRules.push(
-					'.'+ this._className +
-					' li:nth-child(' + i + '){ display: block; ' +
-					animationType + ': ' +
-					animationName + ' ' +
-					config.slideInDuration/1000 + 's ease-out forwards;}'
-				);
+				cssRules['.'+ this._className +' li:nth-child(' + i + ')'] = {
+					display: 'block',
+					animation: animationName + ' ' + config.slideInDuration/1000 + 's ease-out forwards'
+				};
 				// keyFrames
 				var isFirst = i === 1;
 				var isLast = i === config.maxDisplayMsgLen;
@@ -134,21 +151,6 @@ define(function (require, exports, module) {
 				this._$container = $('<ul>', {class: this._className})
 			);
 		},
-		_cssAdjust: function () {
-			// 预先把基本的ul/li样式都生成到页面里
-			function getCssRule(className, cssObj){
-				var cssRule = '';
-				eachKeys(cssObj, function (attr, value) {
-					cssRule += attr + ':' + value + ';';
-				});
-				return '.' + className + '{' + cssRule + '}';
-			}
-
-			this._addCssRule([
-				getCssRule(this._className + ' li', this._options.css.msg),
-				getCssRule(this._className, this._options.css.container)
-			]);
-		},
 		_emit: function () {
 			var _this= this;
 			this._isEmitting = true;
@@ -164,7 +166,7 @@ define(function (require, exports, module) {
 			}
 
 			$msg
-				.one(animationEndType, function () {
+				.one(fixCss(animationend), function () {
 					//console.warn('发送  '+msg +'  完毕', _this._msgList);
 					if(_this._msgCount > _this._staticConfig.maxMsgLen){
 						_this._$container.find('li').last().remove();
@@ -185,25 +187,36 @@ define(function (require, exports, module) {
 				})
 				.prependTo(this._$container);
 		},
-		_addCssRule : function(cssRules, isKeyframes){
+		_addCssRule : function(obj, isKeyframes){
+			// 参数obj示范: {'.con':{width:'200px'}, '.ton':{}}
 			var styleTag = document.createElement('style');
 			styleTag.rel = 'stylesheet';
 			styleTag.type = 'text/css';
 			document.getElementsByTagName('head')[0].appendChild(styleTag);
 			var styles = styleTag.sheet;
+			// todo 处理兼容问题
 
-			eachKeys(cssRules, function (key, value) {
-				var r1, r2, frameR;
+			function getCssRule(selector, cssRuleObj){
+				var cssRule = '';
+				eachKeys(cssRuleObj, function (attr, value) {
+					cssRule += fixCss(attr) + ':' + value + ';';
+				});
+				return selector + '{' + cssRule + '}';
+			}
+
+			eachKeys(obj, function (selector, cssRule) {
+				var r1, r2, frameR, keyFrameName, frames;
 				if(isKeyframes){
-					r1 = '@keyframes ' + key + '{}';
-					r2 = '@-webkit-keyframes ' + key + '{}';
+					keyFrameName = selector;
+					frames = cssRule;
+					r1 = '@keyframes ' + keyFrameName + '{}';
+					r2 = '@-webkit-keyframes ' + keyFrameName + '{}';
 				}else{
-					r1 = r2 = value;
+					r1 = r2 = getCssRule(selector, cssRule);
 				}
 				try {
 					frameR = styles.insertRule(r1, styles.cssRules.length);
-				}
-				catch(e) {
+				} catch(e) {
 					if(e.name == 'SYNTAX_ERR' || e.name == 'SyntaxError') {
 						frameR = styles.insertRule(r2, styles.cssRules.length);
 					}
@@ -212,17 +225,12 @@ define(function (require, exports, module) {
 					}
 				}
 				if(isKeyframes){
-					var frames = value;
 					var original = styles.cssRules[frameR];
 					// 遍历参数2frames对象里的属性, 来添加到keyframes里
 					eachKeys(frames, function (text, css) {
 						var cssRule = text + " {";
 						eachKeys(css, function (k, s) {
-							var pre = '';
-							if(isWebkitStyle && k === 'transform'){
-								pre = '-webkit-';
-							}
-							cssRule += pre + k + ':' + s + ';';
+							cssRule += fixCss(k) + ':' + s + ';';
 						});
 						cssRule += "}";
 						if('appendRule' in original) {
