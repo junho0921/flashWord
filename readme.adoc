@@ -12,3 +12,8 @@ require(['flashWord'], function(){
     fw.display(content);
 });
 ----
+
+## 特点
+. js控制css的生成
+. 动画效果都由css的animation处理好, 不需要js主动控制
+. 轻量级

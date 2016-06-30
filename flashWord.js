@@ -6,11 +6,18 @@ define(function (require, exports, module) {
 	 * 飞屏模块, 面对webkit内核浏览器
 	 * */
 	'use strict';
-	require('jquery');
+	require('libs/jquery');
 
 	var isWebkitStyle = document.body.style.webkitTransform !== undefined;
 	var animationType = isWebkitStyle ?'-webkit-animation': 'animation';
 	var animationEndType = isWebkitStyle ?'webkitAnimationEnd': 'animationend';
+	var renderCount = 0;
+
+	function eachKeys(obj, func){
+		Object.keys(obj).forEach(function (key, index) {
+			func.call(this, key, obj[key], index);
+		});
+	}
 
 	var flashWord = function (options) {
 		this.init(options);
@@ -48,16 +55,39 @@ define(function (require, exports, module) {
 			}
 		},
 		_count:0,
+		_className: 'flashWord',
 		_staticConfig:{
 			maxMsgLen:6,
 			maxDisplayMsgLen:5,
 			displayDuration:2000,
 			animationName:'toLine',
-			className: 'flashWord',
 			slideInDuration:800,
-			displayOptions:{
-				rtl:{
-					//todo 效果
+			displayOptions:{ // 动画效果配置
+				showUp:{
+					'0%': {
+						opacity: 0,
+						transform: 'translate3d(100%, 0, 0)'
+					},
+					'70%': {
+						opacity: 0.7,
+						transform: 'translate3d(-10%, 0, 0)'
+					},
+					'100%': {
+						opacity: 1,
+						transform: 'translate3d(0, 0, 0)'
+					}
+				},
+				queue: function (index, isFadeOut) {
+					return {
+						'0%': {
+							opacity: 1,
+							transform: 'translate3d(0, -' + (index -1) + '00%, 0)'
+						},
+						'100%': {
+							opacity: isFadeOut ? 0 : 1,
+							transform: 'translate3d(0, -' + index + '00%, 0)'
+						}
+					};
 				}
 			}
 		},
@@ -67,63 +97,33 @@ define(function (require, exports, module) {
 		init: function (options) {
 			this._msgList = [];
 			this._options = $.extend(true, {}, this._defaultConfig, options);
-			this._staticConfig.className = this._staticConfig.className + (this._count++); // 独特className
+			this._className = this._className + (renderCount++); // 独特className
 			this._cssAdjust();
 			this._addFrame();
 			this._renderContainer();
 		},
 		_addFrame: function () {
 			var config = this._staticConfig;
-			var cssRules = [];
-			var keyFrames = {};
-			for(var i = 0; i < config.maxDisplayMsgLen; i++){
-				var idx = (i + 1) + '';
-				var str =
-					'.'+ this._staticConfig.className + ' li:nth-child(' + idx +
-					'){ display: block; ' +
-					animationType  +
-					': ' +
-					config.animationName + idx +
-					' ' +
-					config.slideInDuration/1000 +
-					's ease-out forwards;}';
-				cssRules.push(str);
-
-				if(i === 0){ //入场效果
-					keyFrames[config.animationName + idx] = {
-						'0%': {
-							opacity: 0,
-							transform: 'translate3d(100%, 0, 0)'
-						},
-						'70%': {
-							opacity: 0.7,
-							transform: 'translate3d(-10%, 0, 0)'
-						},
-						'100%': {
-							opacity: 1,
-							transform: 'translate3d(0, 0, 0)'
-						}
-					};
-				} else if(i === config.maxDisplayMsgLen -1){ // 退场效果
-					keyFrames[config.animationName + idx] = {
-						'0%': {
-							opacity: 1,
-							transform: 'translate3d(0, -' + (i -1) + '00%, 0)'
-						},
-						'100%': {
-							opacity: 0,
-							transform: 'translate3d(0, -' + i + '00%, 0)'
-						}
-					};
-				} else { // 提升效果
-					keyFrames[config.animationName + idx] = {
-						'0%': {
-							transform: 'translate3d(0, -' + (i -1) + '00%, 0)'
-						},
-						'100%': {
-							transform: 'translate3d(0, -' + i + '00%, 0)'
-						}
-					};
+			var cssRules = []; // css of animation
+			var keyFrames = {};// css of keyFrames
+			for(var i = 1; i <= config.maxDisplayMsgLen; i++){
+				// 一个排队位置的dom对应一个css的animation选择器.
+				var animationName = config.animationName + i;
+				// animation
+				cssRules.push(
+					'.'+ this._className +
+					' li:nth-child(' + i + '){ display: block; ' +
+					animationType + ': ' +
+					animationName + ' ' +
+					config.slideInDuration/1000 + 's ease-out forwards;}'
+				);
+				// keyFrames
+				var isFirst = i === 1;
+				var isLast = i === config.maxDisplayMsgLen;
+				if(isFirst){ // 入场效果
+					keyFrames[animationName] = this._staticConfig.displayOptions.showUp;
+				} else { // 排队效果
+					keyFrames[animationName] = this._staticConfig.displayOptions.queue(i-1, isLast);
 				}
 			}
 			this._addCssRule(cssRules);
@@ -131,21 +131,22 @@ define(function (require, exports, module) {
 		},
 		_renderContainer: function () {
 			$(this._options.view).append(
-				this._$container = $('<ul>', {class: this._staticConfig.className})
+				this._$container = $('<ul>', {class: this._className})
 			);
 		},
 		_cssAdjust: function () {
+			// 预先把基本的ul/li样式都生成到页面里
 			function getCssRule(className, cssObj){
 				var cssRule = '';
-				Object.keys(cssObj).forEach(function (attr) {
-					cssRule += attr + ':' + cssObj[attr] + ';';
+				eachKeys(cssObj, function (attr, value) {
+					cssRule += attr + ':' + value + ';';
 				});
 				return '.' + className + '{' + cssRule + '}';
 			}
 
 			this._addCssRule([
-				getCssRule(this._staticConfig.className + ' li', this._options.css.msg),
-				getCssRule(this._staticConfig.className, this._options.css.container)
+				getCssRule(this._className + ' li', this._options.css.msg),
+				getCssRule(this._className, this._options.css.container)
 			]);
 		},
 		_emit: function () {
@@ -191,42 +192,38 @@ define(function (require, exports, module) {
 			document.getElementsByTagName('head')[0].appendChild(styleTag);
 			var styles = styleTag.sheet;
 
-			var keys = Object.keys(cssRules);
-			keys.forEach(function (key) {
-				var r1, r2, idx;
+			eachKeys(cssRules, function (key, value) {
+				var r1, r2, frameR;
 				if(isKeyframes){
 					r1 = '@keyframes ' + key + '{}';
 					r2 = '@-webkit-keyframes ' + key + '{}';
 				}else{
-					r1 = r2 = cssRules[key];
+					r1 = r2 = value;
 				}
 				try {
-					idx = styles.insertRule(r1, styles.cssRules.length);
+					frameR = styles.insertRule(r1, styles.cssRules.length);
 				}
 				catch(e) {
 					if(e.name == 'SYNTAX_ERR' || e.name == 'SyntaxError') {
-						idx = styles.insertRule(r2, styles.cssRules.length);
+						frameR = styles.insertRule(r2, styles.cssRules.length);
 					}
 					else {
 						throw e;
 					}
 				}
 				if(isKeyframes){
-					var frames = cssRules[key];
-					var original = styles.cssRules[idx];
+					var frames = value;
+					var original = styles.cssRules[frameR];
 					// 遍历参数2frames对象里的属性, 来添加到keyframes里
-					for(var text in frames) {
-						var  css = frames[text];
-
+					eachKeys(frames, function (text, css) {
 						var cssRule = text + " {";
-
-						for(var k in css) {
+						eachKeys(css, function (k, s) {
 							var pre = '';
 							if(isWebkitStyle && k === 'transform'){
 								pre = '-webkit-';
 							}
-							cssRule += pre + k + ':' + css[k] + ';';
-						}
+							cssRule += pre + k + ':' + s + ';';
+						});
 						cssRule += "}";
 						if('appendRule' in original) {
 							original.appendRule(cssRule);
@@ -234,7 +231,7 @@ define(function (require, exports, module) {
 						else {
 							original.insertRule(cssRule);
 						}
-					}
+					});
 				}
 			});
 		},
