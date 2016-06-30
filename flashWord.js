@@ -194,7 +194,6 @@ define(function (require, exports, module) {
 			styleTag.type = 'text/css';
 			document.getElementsByTagName('head')[0].appendChild(styleTag);
 			var styles = styleTag.sheet;
-			// todo 处理兼容问题
 
 			function getCssRule(selector, cssRuleObj){
 				var cssRule = '';
