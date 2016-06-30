@@ -29,6 +29,7 @@ define(function (require, exports, module) {
 					position: 'fixed',
 					left:'300px',
 					top:'200px',
+					'will-change':'all',
 					'z-index': '999'
 				},
 				msg:{
@@ -36,6 +37,7 @@ define(function (require, exports, module) {
 					left: '0',
 					bottom: '0',
 					width: '100%',
+					'will-change':'all',
 					'font-size': '24px',
 					'line-height': '30px',
 					height: '30px',
@@ -52,7 +54,7 @@ define(function (require, exports, module) {
 			displayDuration:2000,
 			animationName:'toLine',
 			className: 'flashWord',
-			slideInDurationslideInDuration:1000,
+			slideInDuration:800,
 			displayOptions:{
 				rtl:{
 					//todo 效果
@@ -92,6 +94,10 @@ define(function (require, exports, module) {
 						'0%': {
 							opacity: 0,
 							transform: 'translate3d(100%, 0, 0)'
+						},
+						'70%': {
+							opacity: 0.7,
+							transform: 'translate3d(-10%, 0, 0)'
 						},
 						'100%': {
 							opacity: 1,
@@ -142,25 +148,19 @@ define(function (require, exports, module) {
 				getCssRule(this._staticConfig.className, this._options.css.container)
 			]);
 		},
-		send: function (msg) {
-			this._msgList.push(msg);
-			if(!this._isEmitting){
-				this._emit();
-			}
-		},
 		_emit: function () {
 			var _this= this;
 			this._isEmitting = true;
+			this._msgCount++;
+
 			clearTimeout(_this._timeoutFunc);
 
 			_this._$container.show();
 
 			var msg = this._msgList.pop(), $msg = $(msg);
-			if(!$msg[0] || $msg[0].tagName.toUpperCase() !== 'LI'){  console.warn('不是记得等等的');
+			if(!$msg[0] || $msg[0].tagName.toUpperCase() !== 'LI'){
 				$msg =  $('<li>').append(msg);
 			}
-
-			this._msgCount++;
 
 			$msg
 				.one(animationEndType, function () {
@@ -237,6 +237,17 @@ define(function (require, exports, module) {
 					}
 				}
 			});
+		},
+
+		/**
+		 * @desc 发送飞屏内容的方法
+		 * @func display
+		 */
+		display: function (msg) {
+			this._msgList.push(msg);
+			if(!this._isEmitting){
+				this._emit();
+			}
 		}
 	};
 	module.exports = flashWord;

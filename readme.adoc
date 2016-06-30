@@ -9,6 +9,6 @@
 require(['flashWord'], function(){
     var content = '<li><h2>展示文字</h2>/li>'
     var fw =  new flashWord();
-    fw.send(content);
+    fw.display(content);
 });
 ----
