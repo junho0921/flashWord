@@ -1,0 +1,12 @@
+# flashWord
+
+飞屏模块, 面对webkit内核浏览器
+
+## 使用demo
+
+[source, javascript]
+----
+var content = '<li><h2>展示文字</h2>/li>'
+var fw =  new flashWord();
+fw.send(content);
+----
