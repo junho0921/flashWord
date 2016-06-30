@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>flashWord</title>
+</head>
+<body>
+
+<button id="bt1">按钮</button>
+<button id="bt2">按钮</button>
+<script src="require.js"></script>
+<script>
+    require(['flashWord'], function (flashWord) {
+        var fw =  new flashWord();
+        $('button').click(function () {
+            var infoList = ['liwen', 'shijie', 'gongsi', 'ouzhuang', 'meiyou', 'howDo', 'niceDay', 'happy', 'goodBay', 'sayI'];
+            var name = infoList[Math.random().toFixed(1)*10];
+            fw.send('@  ' + name);
+        });
+
+
+        window.obj = {
+            attr:{
+                name:'jun'
+            }
+        }
+
+        window.obj2 = $.extend(true, {}, obj);
+        obj2.attr.name = 'xx';
+    })
+
+
+</script>
+</body>
+</html>
