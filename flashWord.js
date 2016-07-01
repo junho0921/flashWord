@@ -4,7 +4,7 @@
 define(function (require, exports, module) {
 	/*
 	 * 飞屏模块, 面对webkit内核浏览器
-	 * 使用注意"
+	 * 使用注意
 	 * 1, options.css的格式必须是有options.css.container, options.css.msg
 	 * */
 	'use strict';
@@ -193,7 +193,7 @@ define(function (require, exports, module) {
 		return function (attr) {
 			var fixedAttr = fixObj[attr];
 			return fixedAttr ? fixedAttr : attr;
-		}
+		};
 	}());
 
 	function eachKeys(obj, func){
@@ -236,11 +236,9 @@ define(function (require, exports, module) {
 				// 遍历参数2frames对象里的属性, 来添加到keyframes里
 				eachKeys(frames, function (text, css) {
 					var cssRule = getCssRule(text, css);
-
 					if('appendRule' in original) {
 						original.appendRule(cssRule);
-					}
-					else {
+					} else {
 						original.insertRule(cssRule);
 					}
 				});
