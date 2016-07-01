@@ -3,7 +3,7 @@
  */
 define(function (require, exports, module) {
 	/*
-	 * 飞屏模块, 面对webkit内核浏览器
+	 * 飞屏模块, 面向webkit内核浏览器
 	 * 使用注意
 	 * 1, options.css的格式必须是有options.css.container, options.css.msg
 	 * */
@@ -54,7 +54,6 @@ define(function (require, exports, module) {
 			maxMsgLen:6,
 			maxDisplayMsgLen:5,
 			displayDuration:2000,
-			animationName:'toLine',
 			slideInDuration:800,
 			displayOptions:{ // 动画效果配置
 				showUp:{
@@ -105,27 +104,45 @@ define(function (require, exports, module) {
 		},
 		_addFrame: function () {
 			var config = this._staticConfig;
-			var cssRules = {}; // css of animation
-			var keyFrames = {};// css of keyFrames
-			for(var i = 1; i <= config.maxDisplayMsgLen; i++){
-				// 一个排队位置的dom对应一个css的animation选择器.
-				var animationName = config.animationName + i;
-				// animation
-				cssRules[this._className +' li:nth-child(' + i + ')'] = {
-					display: 'block',
-					animation: animationName + ' ' + config.slideInDuration/1000 + 's ease-out forwards'
-				};
-				// keyFrames
-				var isFirst = i === 1;
-				var isLast = i === config.maxDisplayMsgLen;
-				if(isFirst){ // 入场效果
-					keyFrames[animationName] = this._staticConfig.displayOptions.showUp;
-				} else { // 排队效果
-					keyFrames[animationName] = this._staticConfig.displayOptions.queue(i-1, isLast);
+
+			renderListFrames({
+				className : this._className + ' li',
+				animateDuration: config.slideInDuration,
+				listLength : config.maxDisplayMsgLen,
+				iterator:function (index) {
+					// keyFrames
+					var isFirst = index === 1;
+					var isLast = index === config.maxDisplayMsgLen;
+					if(isFirst){ // 入场效果
+						return config.displayOptions.showUp;
+					} else { // 排队效果
+						return config.displayOptions.queue(index - 1, isLast);
+					}
 				}
-			}
-			_addCssRule(cssRules);
-			_addCssRule(keyFrames, true);
+			});
+
+			//var config = this._staticConfig;
+			//var cssRules = {}; // css of animation
+			//var keyFrames = {};// css of keyFrames
+			//for(var i = 1; i <= config.maxDisplayMsgLen; i++){
+			//	// 一个排队位置的dom对应一个css的animation选择器.
+			//	var animationName = config.animationName + i;
+			//	// animation
+			//	cssRules[this._className +' li:nth-child(' + i + ')'] = {
+			//		display: 'block',
+			//		animation: animationName + ' ' + config.slideInDuration/1000 + 's ease-out forwards'
+			//	};
+			//	// keyFrames
+			//	var isFirst = i === 1;
+			//	var isLast = i === config.maxDisplayMsgLen;
+			//	if(isFirst){ // 入场效果
+			//		keyFrames[animationName] = config.displayOptions.showUp;
+			//	} else { // 排队效果
+			//		keyFrames[animationName] = config.displayOptions.queue(i-1, isLast);
+			//	}
+			//}
+			//_addCssRule(cssRules);
+			//_addCssRule(keyFrames, true);
 		},
 		_renderContainer: function () {
 			$(this._options.view).append(
@@ -200,6 +217,41 @@ define(function (require, exports, module) {
 		Object.keys(obj).forEach(function (key, index) {
 			func.call(this, key, obj[key], index);
 		});
+	}
+
+	//function renderListFrames (className, listLength, iterator, animationName, animationDuration){
+	//	var animationAry = {};
+	//	var keyFramesAry = {};
+	//	for(var i = 1; i <= listLength; i++){
+	//		var selector = className + ':nth-child(' + i + ')';
+	//		var animationNameSpace = animationName + i;
+	//		animationAry[selector] = animationNameSpace + ' ' + animationDuration/1000 + 's ease-out forwards';
+	//		keyFramesAry[animationNameSpace] = iterator.call(this, i);
+	//	}
+	//	_addCssRule(animationAry);
+	//	_addCssRule(keyFramesAry, true);
+	//}
+
+	function renderListFrames (options){
+		var nameSpace = 'nameIsRandom';// keyFrames的命名空间不重要
+		var animationAry = {};
+		var keyFramesAry = {};
+		var defaultOptions = {
+			className : '',
+			animateDuration: 1000,
+			listLength : 0,
+			animateConfig : ['ease-out', 'forwards'],
+			iterator: function(){}
+		};
+		options = $.extend(defaultOptions,options);
+		for(var i = 1; i <= options.listLength; i++){
+			var selector = options.className + ':nth-child(' + i + ')';
+			var animationNameSpace = nameSpace + i;
+			animationAry[selector] = options.animateConfig.unshift(options.animateDuration/1000).unshift(animationNameSpace).join(' ');
+			keyFramesAry[animationNameSpace] = options.iterator.call(this, i);
+		}
+		_addCssRule(animationAry);
+		_addCssRule(keyFramesAry, true);
 	}
 
 	function _addCssRule (obj, isKeyframes){ // 参数obj示范: {'.con':{width:'200px'}, '.ton':{}}
