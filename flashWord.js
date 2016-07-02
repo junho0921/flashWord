@@ -103,22 +103,101 @@ define(function (require, exports, module) {
 			_addCssRule(basicCss);
 		},
 		_addFrame: function () {
+			var $_ = require('animation');
 			var config = this._staticConfig;
+			var duration = config.slideInDuration;
+			var len = config.maxDisplayMsgLen;
+			var selector = this._className + ' li';
+
+			// 动态的方法应该是具体业务做, 但也可以做出基本的list迭代器作为参考
+			var listAnimationObj = {};
+			var _config = {
+
+			};
+
+			function listRender (iterator){
+				var index = 1;
+				var isLoop = true;
+				arguments[0] = index++;
+				console.log('arguments', arguments);
+				while (isLoop){
+					var result = iterator.apply(this, arguments);
+					if(result == 'end'){
+						isLoop = false;
+					}
+				}
+			}
+
+			listRender(geyKeyFrames, _config, listAnimationObj);
+
+
+
+
+			//function geyKeyFrames(index, config) {
+			//	// keyFrames
+			//	var isFirst = index === 1;
+			//	var isLast = index === config.maxDisplayMsgLen;
+			//	var isEnd = index === config.maxDisplayMsgLen + 1;
+			//	if (isFirst) { // 入场效果
+			//		return config.displayOptions.showUp;
+			//	} else if(isEnd){
+			//		return false;
+			//	}else{ // 排队效果
+			//		return config.displayOptions.queue(index - 1, isLast);
+			//	}
+			//}
+
+
+			function geyKeyFrames(index, config, concatObj) {
+				// keyFrames
+				var selector;
+				// 队列式的写法
+				selector = config.selector + ':nth-child(' + index + ')' ; // 选择性配置css选择器
+				// 链式写法
+				//selector = config.selector + '.model' + index; // 选择性配置css选择器
+				//// 单个目标对象
+				//selector = config.selector;
+
+				var isFirst = index === 1;
+				var isLast = index === config.maxDisplayMsgLen;
+				var isEnd = index === config.maxDisplayMsgLen + 1;
+				if(isEnd){return 'end'}
+
+				if (isFirst) { // 入场效果
+					concatObj[selector] = config.displayOptions.showUp;
+				} else{ // 排队效果
+					concatObj[selector] = config.displayOptions.queue(index - 1, isLast);
+				}
+			}
+
+			// todo api
+			// 数量是问题
+			// 满足: 现成的jQuery对象,
+			// 考虑: 预生成的list的keyFrame
+
+			// 基本模式: 设置css-animation属性
+			$_(selector).animate(config);
+			// 静态动画设置
+			$_(selector).animate({
+				'0%':{},
+				'100%':{}
+			}, config);
+			// 动态动画设置
+			$_(selector).animate(geyKeyFrames, config);
+			// 动态动画的设置是多样玩法的, geyKeyFrames接收的参数有index与opt来配置具体的css动画属性, 而只有返回'end'才能完成css添加
+			// geyKeyFrames利用参数index与opt两者, 完成了队列式动画, 链式模式动画
+
+
+			// 队列动画
+			//$_(selector).animate('listAnimate', geyKeyFrames, duration);
+			// 多重keyFrame, 应该是多次调用本方法
+			//$_(selector).animate('chainAnimate', geyKeyFrames, duration);
 
 			renderListFrames({
 				className : this._className + ' li',
 				animateDuration: config.slideInDuration,
 				listLength : config.maxDisplayMsgLen,
-				iterator:function (index) {
-					// keyFrames
-					var isFirst = index === 1;
-					var isLast = index === config.maxDisplayMsgLen;
-					if(isFirst){ // 入场效果
-						return config.displayOptions.showUp;
-					} else { // 排队效果
-						return config.displayOptions.queue(index - 1, isLast);
-					}
-				}
+				iterator: geyKeyFrames
 			});
 
 			//var config = this._staticConfig;
@@ -244,29 +323,112 @@ define(function (require, exports, module) {
 			iterator: function(){}
 		};
 		options = $.extend(defaultOptions,options);
+		var isLoop = true, index = 1;
+		while (isLoop){
+			var frameRule = options.iterator.call(this, index, options);
+			if(frameRule !== 'end'){
+				index++;
+				var selector = options.className + ':nth-child(' + index +  ')';
+				var animationNameSpace = nameSpace + index;
+				animationAry[selector] = options.animateConfig.unshift(options.animateDuration/1000).unshift(animationNameSpace).join(' ');
+				keyFramesAry[animationNameSpace] = frameRule;
+			}else{
+				isLoop = false;
+			}
+		}
 		for(var i = 1; i <= options.listLength; i++){
-			var selector = options.className + ':nth-child(' + i + ')';
-			var animationNameSpace = nameSpace + i;
-			animationAry[selector] = options.animateConfig.unshift(options.animateDuration/1000).unshift(animationNameSpace).join(' ');
-			keyFramesAry[animationNameSpace] = options.iterator.call(this, i);
+			//var frameRule = options.iterator.call(this, i, options);
+			//if(frameRule !== 'end'){
+            //
+			//}
+			//var selector = options.className + ':nth-child(' + i + ')';
+			//var animationNameSpace = nameSpace + i;
+			//animationAry[selector] = options.animateConfig.unshift(options.animateDuration/1000).unshift(animationNameSpace).join(' ');
+			//keyFramesAry[animationNameSpace] = frameRule;
 		}
 		_addCssRule(animationAry);
 		_addCssRule(keyFramesAry, true);
 	}
 
-	function _addCssRule (obj, isKeyframes){ // 参数obj示范: {'.con':{width:'200px'}, '.ton':{}}
-		var styleTag = document.createElement('style');
-		styleTag.rel = 'stylesheet';
-		styleTag.type = 'text/css';
-		document.getElementsByTagName('head')[0].appendChild(styleTag);
-		var styles = styleTag.sheet;
+	// 入口api, 为keyframe动画提供便利的入口
+	function renderCss (cssObj){
+		// 格式限制 // toFix 格式拓展
+		var firstChild, isCssObjGrandchildObj, isKeyframes;// isKeyframes的判断不准确
+		if(!$.isPlainObject(cssObj)){return false}
+		if(!$.isPlainObject(firstChild = cssObj[Object.keys(cssObj)[0]])) {return false}
+		isCssObjGrandchildObj = $.isPlainObject(firstChild[Object.keys(firstChild)[0]]);
+
+		if(isKeyframes = isCssObjGrandchildObj){
+			// isKeyframes: 需要进行解析, 整理出animation对象与keyframe的对象, 分别添加到style
+			var animationObj = {};
+			var keyframesObj = {};
+
+			eachKeys(cssObj, function (selector, value) {
+				eachKeys(value, function (animationRule, keyframeRule) {
+					animationObj[selector] = {
+						animation: animationRule
+					};
+					var keyframeName = animationRule.split[' '][0];
+					keyframesObj[keyframeName] = keyframeRule
+				})
+			});
+			console.log(animationObj, keyframesObj);
+
+			_addCssRule(animationObj);
+			_addCssRule(keyframesObj, true);
+		}else{
+			_addCssRule(cssObj);
+		}
+		// 格式示范
+		//var fx = {
+		//	'.con li:nth-child(1)': {
+		//		'keyFrameName1 1s ease-out forwards': {
+		//			'0%': {
+		//				opacity: 1
+		//			},
+		//			'100%': {
+		//				opacity: 0
+		//			}
+		//		}
+		//	},
+		//	'.con li:nth-child(2)': {
+		//		'keyFrameName2 1s ease-out forwards': {
+		//			'0%': {
+		//				opacity: 1
+		//			},
+		//			'100%': {
+		//				opacity: 0
+		//			}
+		//		}
+		//	}
+		//};
+        //
+		//var dom = {
+		//	'.con':{
+		//		width:'200px'
+		//	},
+		//	'.ton':{
+		//		width:'200px'
+		//	}
+		//};
+	}
+	// 基本方法, 接受的参数都是按照css规范, 第一层属性名必须是选择器, 其值是css规则内容.
+	function _addCssRule (obj, isKeyframes){
+		//var styleTag = document.createElement('style');
+		//styleTag.rel = 'stylesheet';
+		//styleTag.type = 'text/css';
+		//document.getElementsByTagName('head')[0].appendChild(styleTag);
+		//var styles = styleTag.sheet;
+
+		var $tyle = $('<style>', {rel:'stylesheet', type:'text/css'}).appendTo($('head'));
+		var styles = $tyle[0].sheet;
 
 		function getCssRule(selector, cssRuleObj){
 			var cssRule = '';
 			eachKeys(cssRuleObj, function (attr, value) {
 				cssRule += fixCss(attr) + ':' + value + ';';
 			});
-			return selector + '{' + cssRule + '}';
+			return selector + '{' +  + '}';
 		}
 
 		eachKeys(obj, function (selector, cssRule) {
