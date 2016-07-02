@@ -44,7 +44,7 @@ define(function (require, exports, module) {
 					height: '30px',
 					transform: 'translate3d(0, 0, 0)',
 					'-webkit-transform': 'translate3d(0, 0, 0)',
-					display: 'none'
+					display:'none'
 				}
 			}
 		},
@@ -115,30 +115,23 @@ define(function (require, exports, module) {
 			var listAnimationObj = {};
 
 			function geyKeyFrames(index, config, concatObj) {
-				//console.log(index, config, concatObj);
-				// keyFrames
-				var selector, frameRule;
-				// 队列式的写法
-				selector = config.selector + ':nth-child(' + index + ')' ; // 选择性配置css选择器
-				// 链式写法
-				//selector = config.selector + '.model' + index; // 选择性配置css选择器
-				var frameObj = concatObj[selector] = {};
+				if(index > config.len){return 'end'}
+				var elem, frameRule;
+				elem = config.selector + ':nth-child(' + index + ')' ;
+				var elemObj = concatObj[elem] = {};
 				var keyframeName = 'randomName' + index;
+				var elemAnimateConfig = keyframeName + ' ' + config.animationConfig + '; display:block';
 
-				var isFirst = index === 1;
-				var isLast = index === config.len;
-				var isEnd = index === config.len + 1;
-				if(isEnd){return 'end'}
+				var isFirst = index === 1, isLast = index === config.len;
 				if (isFirst) { // 入场效果
 					frameRule = config.showUp;
 				} else{ // 排队效果
 					frameRule = config.queue(index - 1, isLast);
 				}
-				frameObj[keyframeName + ' ' + config.animationConfig] = frameRule;
+				elemObj[elemAnimateConfig] = frameRule;
 			}
 
 			listIterator(geyKeyFrames, _config, listAnimationObj);
-			console.log('listAnimationObj', listAnimationObj);
 			renderCss(listAnimationObj);
 		},
 		_renderContainer: function () {
@@ -161,8 +154,7 @@ define(function (require, exports, module) {
 			}
 
 			$msg
-				.one('animationend', function () {
-					console.log('animationend');
+				.one(fixCss('animationend'), function () {
 					if(_this._msgCount > _this._staticConfig.maxMsgLen){
 						_this._$container.find('li').last().remove();
 						_this._msgCount--;
@@ -245,14 +237,20 @@ define(function (require, exports, module) {
 
 			eachKeys(cssObj, function (selector, value) {
 				eachKeys(value, function (animationRule, keyframeRule) {
+					var rules = animationRule.split(';');
+					animationRule = rules.shift();// 所以必须动画属性在前头
 					animationObj[selector] = {
 						animation: animationRule
 					};
+					rules.forEach(function (rule) {
+						rule = $.trim(rule).split(':');
+						animationObj[selector][rule[0]] = rule[1];
+					});
 					var keyframeName = $.trim(animationRule).split(' ')[0];
 					keyframesObj[keyframeName] = keyframeRule
 				})
 			});
-			console.log(animationObj, keyframesObj);
+			console.warn(animationObj, keyframesObj);
 
 			_addCssRule(animationObj);
 			_addCssRule(keyframesObj, true);
