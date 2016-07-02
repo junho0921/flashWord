@@ -103,35 +103,29 @@ define(function (require, exports, module) {
 			_addCssRule(basicCss);
 		},
 		_addFrame: function () {
-			var _config = { // todo 不这样重复工作
-				selector : this._className + ' li',
-				duration : this._staticConfig.slideInDuration,
-				len :this._staticConfig.maxDisplayMsgLen,
-				animationConfig: this._staticConfig.slideInDuration/1000 + 's ease-out forwards',
-				showUp :this._staticConfig.displayOptions.showUp,
-				queue :this._staticConfig.displayOptions.queue
-			};
+			var selector = this._className + ' li',
+				len = this._staticConfig.maxDisplayMsgLen,
+				animationConfig = this._staticConfig.slideInDuration/1000 + 's ease-out forwards',// 限定了?
+				showUp = this._staticConfig.displayOptions.showUp,
+				queue = this._staticConfig.displayOptions.queue;
 
 			var listAnimationObj = {};
 
-			function geyKeyFrames(index, config, concatObj) {
-				if(index > config.len){return 'end'}
+			for(var index = 1; index <= len; index++){ // 尝试过做成listRender的通用方法, 但没有成效, 因为都没有通用的效果.
 				var elem, frameRule;
-				elem = config.selector + ':nth-child(' + index + ')' ;
-				var elemObj = concatObj[elem] = {};
-				var keyframeName = 'randomName' + index;
-				var elemAnimateConfig = keyframeName + ' ' + config.animationConfig + '; display:block';
+				elem = selector + ':nth-child(' + index + ')' ;// 可通用
+				var elemObj = listAnimationObj[elem] = {}; // 可通用
+				var keyframeName = 'randomName' + index; // 可通用
+				var elemAnimateConfig = keyframeName + ' ' + animationConfig + '; display:block';// 可通用
 
-				var isFirst = index === 1, isLast = index === config.len;
+				var isFirst = index === 1, isLast = index === len;
 				if (isFirst) { // 入场效果
-					frameRule = config.showUp;
+					frameRule = showUp;
 				} else{ // 排队效果
-					frameRule = config.queue(index - 1, isLast);
+					frameRule = queue(index - 1, isLast);
 				}
 				elemObj[elemAnimateConfig] = frameRule;
 			}
-
-			listIterator(geyKeyFrames, _config, listAnimationObj);
 			renderCss(listAnimationObj);
 		},
 		_renderContainer: function () {
@@ -209,19 +203,6 @@ define(function (require, exports, module) {
 		});
 	}
 
-	// 基础工具 - list迭代器
-	function listIterator (iterator){
-		var index = 1;
-		var isLoop = true;
-		while (isLoop){
-			arguments[0] = index++;
-			var result = iterator.apply(this, arguments);
-			if(result == 'end'){
-				isLoop = false;
-			}
-		}
-	}
-
 	// 入口api, 为keyframe动画提供便利的入口
 	function renderCss (cssObj){
 		// 格式限制 // toFix 格式拓展
@@ -230,8 +211,7 @@ define(function (require, exports, module) {
 		if(!$.isPlainObject(firstChild = cssObj[Object.keys(cssObj)[0]])) {return false}
 		isCssObjGrandchildObj = $.isPlainObject(firstChild[Object.keys(firstChild)[0]]);
 
-		if(isKeyframes = isCssObjGrandchildObj){
-			// isKeyframes: 需要进行解析, 整理出animation对象与keyframe的对象, 分别添加到style
+		if(isKeyframes = isCssObjGrandchildObj){ // isKeyframes: 需要进行解析, 整理出animation对象与keyframe的对象, 分别添加到style
 			var animationObj = {};
 			var keyframesObj = {};
 
@@ -250,8 +230,6 @@ define(function (require, exports, module) {
 					keyframesObj[keyframeName] = keyframeRule
 				})
 			});
-			console.warn(animationObj, keyframesObj);
-
 			_addCssRule(animationObj);
 			_addCssRule(keyframesObj, true);
 		}else{
@@ -292,14 +270,8 @@ define(function (require, exports, module) {
 	}
 	// 基本方法, 接受的参数都是按照css规范, 第一层属性名必须是选择器, 其值是css规则内容.
 	function _addCssRule (obj, isKeyframes){
-		var styleTag = document.createElement('style');
-		styleTag.rel = 'stylesheet';
-		styleTag.type = 'text/css';
-		document.getElementsByTagName('head')[0].appendChild(styleTag);
-		var styles = styleTag.sheet;
-
-		//var $tyle = $('<style>', {rel:'stylesheet', type:'text/css'}).appendTo($('head'));
-		//var styles = $tyle[0].sheet;
+		var $tyle = $('<style>', {rel:'stylesheet', type:'text/css'}).appendTo($('head'));
+		var styles = $tyle[0].sheet;
 
 		function getCssRule(selector, cssRuleObj){
 			var cssRule = '';
@@ -317,7 +289,6 @@ define(function (require, exports, module) {
 				r1 = fixCss('@keyframes') + ' ' + keyFrameName + '{}';
 			}else{
 				r1 = getCssRule(selector, cssRule);
-				console.log(r1);
 			}
 			try {
 				frameR = styles.insertRule(r1, styles.cssRules.length);
