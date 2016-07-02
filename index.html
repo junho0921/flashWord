@@ -12,6 +12,7 @@
     require(['flashWord'], function (flashWord) {
         var fw =  new flashWord();
         $('button').click(function () {
+            console.log('click')
             var infoList = ['liwen', 'shijie', 'gongsi', 'ouzhuang', 'meiyou', 'howDo', 'niceDay', 'happy', 'goodBay', 'sayI'];
             var name = infoList[Math.random().toFixed(1)*10];
             fw.display('<li>@  ' + name + '</li>');
