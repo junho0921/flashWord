@@ -113,10 +113,10 @@ define(function (require, exports, module) {
 
 			for(var index = 1; index <= len; index++){ // 尝试过做成listRender的通用方法, 但没有成效, 因为都没有通用的效果.
 				var elem, frameRule;
-				elem = selector + ':nth-child(' + index + ')' ;// 可通用
-				var elemObj = listAnimationObj[elem] = {}; // 可通用
-				var keyframeName = 'randomName' + index; // 可通用
-				var elemAnimateConfig = keyframeName + ' ' + animationConfig + '; display:block';// 可通用
+				elem = selector + ':nth-child(' + index + ')' ;
+				var elemObj = listAnimationObj[elem] = {};
+				var keyframeName = 'randomName' + index;
+				var elemAnimateConfig = keyframeName + ' ' + animationConfig + '; display:block';
 
 				var isFirst = index === 1, isLast = index === len;
 				if (isFirst) { // 入场效果
@@ -126,6 +126,7 @@ define(function (require, exports, module) {
 				}
 				elemObj[elemAnimateConfig] = frameRule;
 			}
+
 			renderCss(listAnimationObj);
 		},
 		_renderContainer: function () {
@@ -235,38 +236,6 @@ define(function (require, exports, module) {
 		}else{
 			_addCssRule(cssObj);
 		}
-		// 格式示范
-		//var fx = {
-		//	'.con li:nth-child(1)': {
-		//		'keyFrameName1 1s ease-out forwards': {
-		//			'0%': {
-		//				opacity: 1
-		//			},
-		//			'100%': {
-		//				opacity: 0
-		//			}
-		//		}
-		//	},
-		//	'.con li:nth-child(2)': {
-		//		'keyFrameName2 1s ease-out forwards': {
-		//			'0%': {
-		//				opacity: 1
-		//			},
-		//			'100%': {
-		//				opacity: 0
-		//			}
-		//		}
-		//	}
-		//};
-        //
-		//var dom = {
-		//	'.con':{
-		//		width:'200px'
-		//	},
-		//	'.ton':{
-		//		width:'200px'
-		//	}
-		//};
 	}
 	// 基本方法, 接受的参数都是按照css规范, 第一层属性名必须是选择器, 其值是css规则内容.
 	function _addCssRule (obj, isKeyframes){
@@ -309,5 +278,6 @@ define(function (require, exports, module) {
 			}
 		});
 	}
+
 	module.exports = flashWord;
 });
