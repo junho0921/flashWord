@@ -10,7 +10,7 @@ define(function (require, exports, module) {
 	'use strict';
 	require('libs/jquery');
 
-	var renderCount = 0, fixCss;
+	var renderCount = 0, fixCss, itemH, listAry = [];
 
 	var flashWord = function (options) {
 		this.init(options);
@@ -25,7 +25,7 @@ define(function (require, exports, module) {
 			className: '',
 			css:{
 				container:{
-					width: '300px',
+					width: '100px',
 					height: '300px',
 					position: 'fixed',
 					left:'300px',
@@ -39,12 +39,13 @@ define(function (require, exports, module) {
 					bottom: '0',
 					width: '100%',
 					'will-change':'all',
-					'font-size': '24px',
-					'line-height': '30px',
-					height: '30px',
+					'font-size': '10px',
+					'line-height': '10px',
 					transform: 'translate3d(0, 0, 0)',
 					'-webkit-transform': 'translate3d(0, 0, 0)',
-					display:'none'
+					display:'none',
+					'word-break': 'break-all',
+					transition: 'all 0.2s ease'
 				}
 			}
 		},
@@ -54,7 +55,7 @@ define(function (require, exports, module) {
 			maxMsgLen:6,
 			maxDisplayMsgLen:5,
 			displayDuration:2000,
-			slideInDuration:800,
+			slideInDuration:200,
 			displayOptions:{ // 动画效果配置
 				showUp:{
 					'0%': {
@@ -74,11 +75,11 @@ define(function (require, exports, module) {
 					return {
 						'0%': {
 							opacity: 1,
-							transform: 'translate3d(0, -' + (index -1) + '00%, 0)'
+							transform: 'translate3d(0, -' + (index -1)*itemH + 'px, 0)'
 						},
 						'100%': {
 							opacity: isFadeOut ? 0 : 1,
-							transform: 'translate3d(0, -' + index + '00%, 0)'
+							transform: 'translate3d(0, -' + index*itemH + 'px, 0)'
 						}
 					};
 				}
@@ -90,9 +91,16 @@ define(function (require, exports, module) {
 		init: function (options) {
 			this._msgList = [];
 			this._options = $.extend(true, {}, this._defaultConfig, options);
+
 			this._renderBasicCss();
-			this._addFrame();
 			this._renderContainer();
+			this._getsingeH();
+			this._addFrame();
+		},
+		_getsingeH: function () {
+			var $li = $('<li>').text('.').appendTo(this._$container);
+			itemH = $li.height();
+			$li.remove();
 		},
 		// 预先把基本的ul/li样式都生成到页面里
 		_renderBasicCss: function () {
@@ -104,7 +112,7 @@ define(function (require, exports, module) {
 		},
 		_addFrame: function () {
 			var selector = this._className + ' li',
-				len = this._staticConfig.maxDisplayMsgLen,
+				len = this._staticConfig.maxMsgLen,
 				animationConfig = this._staticConfig.slideInDuration/1000 + 's ease-out forwards',// 限定了?
 				showUp = this._staticConfig.displayOptions.showUp,
 				queue = this._staticConfig.displayOptions.queue;
@@ -139,6 +147,9 @@ define(function (require, exports, module) {
 			this._isEmitting = true;
 			this._msgCount++;
 
+			var $item = _this._$container.find('li');
+
+
 			clearTimeout(_this._timeoutFunc);
 
 			_this._$container.show();
@@ -152,8 +163,10 @@ define(function (require, exports, module) {
 				.one(fixCss('animationend'), function () {
 					if(_this._msgCount > _this._staticConfig.maxMsgLen){
 						_this._$container.find('li').last().remove();
+						listAry.pop();
 						_this._msgCount--;
 					}
+					window.listAry = listAry;
 
 					if(_this._msgList.length){
 						_this._emit();
@@ -168,6 +181,17 @@ define(function (require, exports, module) {
 					}
 				})
 				.prependTo(this._$container);
+
+			var newH = $msg.height();
+			var overH = newH - itemH;
+			if(Math.abs(overH) > 3) {
+				listAry.forEach(function (obj) {
+					obj[0] = obj[0] + overH;
+					obj[1].css('bottom', obj[0] + 'px');
+					console.log('foreach 2  sh = ', overH);
+				});
+			}
+			listAry.unshift([0, $msg]);
 		},
 
 		/**
