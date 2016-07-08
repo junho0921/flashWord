@@ -1,16 +1,18 @@
 /**
- * Created by jiajunhe on 2016/6/29.
+ * Created by jiajunhe on 2016/7/8.
  */
+
 define(function (require, exports, module) {
 	/*
 	 * 飞屏模块, 面对webkit内核浏览器
 	 * 使用注意
 	 * 1, options.css的格式必须是有options.css.container, options.css.msg
+	 * 2, js控制高度, 解除keyFrame
 	 * */
 	'use strict';
-	require('libs/jquery');
+	require('jquery');
 
-	var renderCount = 0, fixCss, scrollH;
+	var renderCount = 0, fixCss;
 
 	var flashWord = function (options) {
 		this.init(options);
@@ -20,7 +22,7 @@ define(function (require, exports, module) {
 	flashWord.prototype = {
 		_$container:null,
 		_msgList: null,
-		_listAry: null,
+		_heightAry: null,
 		_defaultConfig:{
 			view: 'body',
 			className: '',
@@ -29,7 +31,7 @@ define(function (require, exports, module) {
 					height: '357px',
 					left: '278px',
 					top: '28px',
-					width: '300px',
+					width: '700px',
 					position: 'fixed',
 					'will-change':'all',
 					'z-index': '999'
@@ -43,9 +45,7 @@ define(function (require, exports, module) {
 					'font-size': '24px',
 					'line-height': '30px',
 					transform: 'translate3d(0, 0, 0)',
-					padding: '5px 10px',
-					display:'none',
-					'word-break': 'break-all'
+					padding: '5px 10px'
 				}
 			}
 		},
@@ -83,18 +83,6 @@ define(function (require, exports, module) {
 						opacity: 1,
 						transform: 'translate3d(0, 0, 0)'
 					}
-				},
-				queue: function (index, isFadeOut) {
-					return {
-						'0%': {
-							opacity: 1,
-							transform: 'translate3d(0, -' + (index -1)*scrollH + 'px, 0)'
-						},
-						'100%': {
-							opacity: isFadeOut ? 0 : 1,
-							transform: 'translate3d(0, -' + index*scrollH + 'px, 0)'
-						}
-					};
 				}
 			}
 		},
@@ -103,18 +91,11 @@ define(function (require, exports, module) {
 		_isEmitting:false,
 		init: function (options) {
 			this._msgList = [];
-			this._listAry = [];
+			this._heightAry = [];
 			this._options = $.extend(true, {}, this._defaultConfig, options);
-
 			this._renderBasicCss();
-			this._renderContainer();
-			this._getsingeH();
 			this._addFrame();
-		},
-		_getsingeH: function () {
-			var $li = $('<li>.</li>').appendTo(this._$container);
-			scrollH = $li.height();
-			$li.remove();
+			this._renderContainer();
 		},
 		// 预先把基本的ul/li样式都生成到页面里
 		_renderBasicCss: function () {
@@ -122,7 +103,7 @@ define(function (require, exports, module) {
 			this._className = !!opt.className ? opt.className : this._className + (renderCount++);// 独特className
 			basicCss[this._className] = opt.css.container;
 			basicCss[this._className + ' li'] = opt.css.msg;
-			basicCss[this._className + ' li'].transition = 'all ' + this._staticConfig.slideInDuration/1000 + 's ease-out';
+			basicCss[this._className + ' li'].transition = 'all ' + this._staticConfig.slideInDuration/1000 + 's ease';
 			basicCss[this._className + ' li.msgMode0 > *'] = this._staticConfig.msgMode[0];
 			basicCss[this._className + ' li.msgMode1 > *'] = this._staticConfig.msgMode[1];
 			basicCss[this._className + ' li.msgMode2 > *'] = this._staticConfig.msgMode[2];
@@ -130,29 +111,11 @@ define(function (require, exports, module) {
 		},
 		_addFrame: function () {
 			var selector = this._className + ' li',
-				len = this._staticConfig.maxMsgLen,
-				animationConfig = this._staticConfig.slideInDuration/1000 + 's ease-out forwards',// 限定了?
-				showUp = this._staticConfig.displayOptions.showUp,
-				queue = this._staticConfig.displayOptions.queue;
-
+				animationConfig = this._staticConfig.slideInDuration/1000 + 's ease-out forwards';
 			var listAnimationObj = {};
-
-			for(var index = 1; index <= len; index++){ // 尝试过做成listRender的通用方法, 但没有成效, 因为都没有通用的效果.
-				var elem, frameRule;
-				elem = selector + ':nth-child(' + index + ')' ;
-				var elemObj = listAnimationObj[elem] = {};
-				var keyframeName = 'randomName' + index;
-				var elemAnimateConfig = keyframeName + ' ' + animationConfig + '; display:block';
-
-				var isFirst = index === 1, isLast = index === len;
-				if (isFirst) { // 入场效果
-					frameRule = showUp;
-				} else{ // 排队效果
-					frameRule = queue(index - 1, isLast);
-				}
-				elemObj[elemAnimateConfig] = frameRule;
-			}
-
+			var elemObj = listAnimationObj[selector + ':nth-child(1)'] = {};
+			var elemAnimateConfig = 'randomName' + ' ' + animationConfig + '; display:block';
+			elemObj[elemAnimateConfig] = this._staticConfig.displayOptions.showUp;
 			renderCss(listAnimationObj);
 		},
 		_renderContainer: function () {
@@ -164,6 +127,7 @@ define(function (require, exports, module) {
 			var _this= this;
 			this._isEmitting = true;
 			this._msgCount++;
+			var $items = this._$container.find('li');
 
 			clearTimeout(_this._timeoutFunc);
 
@@ -178,7 +142,7 @@ define(function (require, exports, module) {
 				.addClass('msgMode' + msgObj.vipMode)
 				.one(fixCss('animationend'), function () {
 					if(_this._msgCount > _this._staticConfig.maxMsgLen){
-						_this._listAry.pop()[1].remove();
+						_this._$container.find('li').last().remove();
 						_this._msgCount--;
 					}
 
@@ -189,7 +153,7 @@ define(function (require, exports, module) {
 						_this._timeoutFunc = setTimeout(function () {
 							_this._$container.fadeOut(function () {
 								_this._msgCount = 0;
-								_this._listAry = [];
+								_this._heightAry = [];
 								_this._$container.find('li').remove();
 							});
 						}, _this._staticConfig.displayDuration);
@@ -197,14 +161,21 @@ define(function (require, exports, module) {
 				})
 				.prependTo(this._$container);
 
-			var overH = $msg.height() - scrollH;
-			if(Math.abs(overH) > 3) {
-				_this._listAry.forEach(function (obj) {
-					obj[0] += overH;
-					obj[1].css('bottom', obj[0] + 'px');
+			this._scroll($items, $msg.height());
+		},
+		_scroll: function ($targets, scrollH) {
+			var heightAry = this._heightAry, max = this._staticConfig.maxMsgLen - 1;
+			heightAry.forEach(function (height, index) {
+				heightAry[index] = height + scrollH;
+			});
+			heightAry.unshift(scrollH);
+			$targets.each(function (index, target) {
+				var itemH = heightAry[index];
+				$(target).css({
+					transform: 'translate3d(0, -'+ itemH +'px , 0)',
+					opacity: index == max? 0 : 1
 				});
-			}
-			this._listAry.unshift([0, $msg]);
+			});
 		},
 
 		/**
