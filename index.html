@@ -3,6 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <title>flashWord</title>
+    <style>
+        body{ background: #000;}
+        /*.flashWord0 li.msgMode1 > * {*/
+            /*text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #FF9900, 0 0 35px #FF9900, 0 0 40px #FF9900, 0 0 50px #FF9900, 0 0 75px #FF9900;*/
+        /*}*/
+        /*.flashWord0 li.msgMode0 > * {*/
+            /*text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #FF1177, 0 0 35px #FF1177, 0 0 40px #FF1177, 0 0 50px #FF1177, 0 0 75px #FF1177;*/
+        /*}*/
+    </style>
 </head>
 <body>
 <button id="bt1">按钮</button>
@@ -17,7 +26,7 @@
                 'asdawdawdawdaaaq2eq2eq2eq2eaaaaaaaaaaaaaaaaaaa',
                 'gongsi', 'ouzhuang', 'meiyoasdawdawdawdaaaq2eq2eq2eq2eaaaaaaaaaaaaaaaaaaau', 'howDasdawdawdawdaaaq2eq2eq2eq2eaaaaaaaaaaaaaaaaaaao', 'niceDay', 'happy', 'goodBay', 'sayI'];
             var name = infoList[Math.random().toFixed(1)*10];
-            fw.display('<li>@  ' + name + '</li>');
+            fw.display('<li>@  <i>' + name + '</i></li>', 2 );
         });
     });
 </script>

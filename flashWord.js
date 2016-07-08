@@ -3,7 +3,7 @@
  */
 define(function (require, exports, module) {
 	/*
-	 * 飞屏模块, 面向webkit内核浏览器
+	 * 飞屏模块, 面对webkit内核浏览器
 	 * 使用注意
 	 * 1, options.css的格式必须是有options.css.container, options.css.msg
 	 * */
@@ -25,11 +25,11 @@ define(function (require, exports, module) {
 			className: '',
 			css:{
 				container:{
-					width: '100px',
-					height: '300px',
+					height: '357px',
+					left: '278px',
+					top: '28px',
+					width: '300px',
 					position: 'fixed',
-					left:'300px',
-					top:'200px',
 					'will-change':'all',
 					'z-index': '999'
 				},
@@ -39,10 +39,10 @@ define(function (require, exports, module) {
 					bottom: '0',
 					width: '100%',
 					'will-change':'all',
-					'font-size': '10px',
-					'line-height': '10px',
+					'font-size': '24px',
+					'line-height': '30px',
 					transform: 'translate3d(0, 0, 0)',
-					'-webkit-transform': 'translate3d(0, 0, 0)',
+					padding: '5px 10px',
 					display:'none',
 					'word-break': 'break-all',
 					transition: 'all 0.2s ease'
@@ -53,11 +53,24 @@ define(function (require, exports, module) {
 		_className: '.flashWord',
 		_staticConfig:{
 			maxMsgLen:6,
-			maxDisplayMsgLen:5,
-			displayDuration:2000,
-			slideInDuration:200,
+			displayDuration:5000,
+			slideInDuration:800,
+			msgMode:{ // 字体颜色
+				0:{ // 普通
+					color: '#fff',
+					'text-shadow':'0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #FF1177, 0 0 35px #FF1177, 0 0 40px #FF1177, 0 0 50px #FF1177, 0 0 75px #FF1177'
+				},
+				1:{ // vip
+					color: '#fff',
+					'text-shadow':'0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #FF9900, 0 0 35px #FF9900, 0 0 40px #FF9900, 0 0 50px #FF9900, 0 0 75px #FF9900'
+				},
+				2:{ // 白金vip
+					color: '#fff',
+					'text-shadow': '0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #ff00de, 0 0 35px #ff00de, 0 0 40px #ff00de, 0 0 50px #ff00de, 0 0 75px #ff00de'
+				}
+			},
 			displayOptions:{ // 动画效果配置
-				showUp:{
+				showUp:{ // 进场效果
 					'0%': {
 						opacity: 0,
 						transform: 'translate3d(100%, 0, 0)'
@@ -108,6 +121,10 @@ define(function (require, exports, module) {
 			this._className = !!opt.className ? opt.className : this._className + (renderCount++);// 独特className
 			basicCss[this._className] = opt.css.container;
 			basicCss[this._className + ' li'] = opt.css.msg;
+			basicCss[this._className + ' li'].transition = 'all ' + this._staticConfig.slideInDuration/1000 + 's ease';
+			basicCss[this._className + ' li.msgMode0 > *'] = this._staticConfig.msgMode[0];
+			basicCss[this._className + ' li.msgMode1 > *'] = this._staticConfig.msgMode[1];
+			basicCss[this._className + ' li.msgMode2 > *'] = this._staticConfig.msgMode[2];
 			_addCssRule(basicCss);
 		},
 		_addFrame: function () {
@@ -149,24 +166,23 @@ define(function (require, exports, module) {
 
 			var $item = _this._$container.find('li');
 
-
 			clearTimeout(_this._timeoutFunc);
 
 			_this._$container.show();
 
-			var msg = this._msgList.pop(), $msg = $(msg);
+			var msgObj = this._msgList.pop(), $msg = $(msgObj.content);
 			if(!$msg[0] || $msg[0].tagName.toUpperCase() !== 'LI'){
-				$msg =  $('<li>').append(msg);
+				$msg =  $('<li>').append(msgObj.content);
 			}
 
 			$msg
+				.addClass('msgMode' + msgObj.vipMode)
 				.one(fixCss('animationend'), function () {
 					if(_this._msgCount > _this._staticConfig.maxMsgLen){
 						_this._$container.find('li').last().remove();
 						listAry.pop();
 						_this._msgCount--;
 					}
-					window.listAry = listAry;
 
 					if(_this._msgList.length){
 						_this._emit();
@@ -198,8 +214,11 @@ define(function (require, exports, module) {
 		 * @desc 发送飞屏内容的方法
 		 * @func display
 		 */
-		display: function (msg) {
-			this._msgList.push(msg);
+		display: function (msg, vipMode) {
+			this._msgList.push({
+				content: msg,
+				vipMode: vipMode
+			});
 			if(!this._isEmitting){
 				this._emit();
 			}
@@ -232,11 +251,11 @@ define(function (require, exports, module) {
 	function renderCss (cssObj){
 		// 格式限制 // toFix 格式拓展
 		var firstChild, isCssObjGrandchildObj, isKeyframes;// isKeyframes的判断不准确
-		if(!$.isPlainObject(cssObj)){return false}
-		if(!$.isPlainObject(firstChild = cssObj[Object.keys(cssObj)[0]])) {return false}
+		if(!$.isPlainObject(cssObj)){return false;}
+		if(!$.isPlainObject(firstChild = cssObj[Object.keys(cssObj)[0]])) {return false;}
 		isCssObjGrandchildObj = $.isPlainObject(firstChild[Object.keys(firstChild)[0]]);
-
-		if(isKeyframes = isCssObjGrandchildObj){ // isKeyframes: 需要进行解析, 整理出animation对象与keyframe的对象, 分别添加到style
+		isKeyframes = isCssObjGrandchildObj;
+		if(isKeyframes){ // isKeyframes: 需要进行解析, 整理出animation对象与keyframe的对象, 分别添加到style
 			var animationObj = {};
 			var keyframesObj = {};
 
@@ -252,8 +271,8 @@ define(function (require, exports, module) {
 						animationObj[selector][rule[0]] = rule[1];
 					});
 					var keyframeName = $.trim(animationRule).split(' ')[0];
-					keyframesObj[keyframeName] = keyframeRule
-				})
+					keyframesObj[keyframeName] = keyframeRule;
+				});
 			});
 			_addCssRule(animationObj);
 			_addCssRule(keyframesObj, true);
